@@ -78,7 +78,6 @@ const AuthController = {
             const sixHours = 6 * 60 * 60 * 1000
             const resetExpires = new Date(now + sixHours)
             
-            console.log('=== FORGOT PASSWORD ===')
             console.log('Now:', new Date(now))
             console.log('Expires akan disimpan:', resetExpires)
 
