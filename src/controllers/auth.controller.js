@@ -104,11 +104,9 @@ const AuthController = {
                 return commonHelper.response(res, null, 400, 'Invalid or expired token')
             }
 
-            console.log('Sekarang:', new Date())
-            console.log('Expires:', new Date(user.reset_password_expires))
-            console.log('Expired?', new Date() > new Date(user.reset_password_expires))
-
-            if (new Date() > new Date(user.reset_password_expires)) {
+            const expiresFixed = new Date(new Date(user.reset_password_expires).getTime() + 7 * 60 * 60 * 1000)
+            
+            if (new Date() > expiresFixed) {
                 return commonHelper.response(res, null, 400, 'Token has expired')
             }
 
