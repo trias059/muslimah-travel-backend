@@ -1,9 +1,9 @@
-import express from 'express'
-import WishlistController from '../controllers/WishlistController.js'
-import { protect } from '../middlewares/auth.js'
+const express = require('express');
+const WishlistController = require('../controllers/WishlistController');
+const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router()
 
 router.get('/', protect, WishlistController.getByUser)
 
-export default router
+module.exports = router;

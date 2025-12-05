@@ -1,6 +1,6 @@
-import express from 'express'
-import AuthController from '../controllers/UserController.js'
-import { protect, isAdmin } from '../middlewares/auth.js'
+const express = require('express');
+const AuthController = require('../controllers/AuthController');
+const { protect, isAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router()
 
@@ -16,4 +16,4 @@ router.put('/users/:id', protect, isAdmin, AuthController.updateUser)
 
 router.delete('/users/:id', protect, isAdmin, AuthController.deleteUser)
 
-export default router
+module.exports = router;

@@ -1,8 +1,8 @@
-import express from 'express'
-import PackageController from '../controllers/PackageController.js'
+const express = require('express');
+const PackageController = require('../controllers/PackageController');
 
 const router = express.Router()
 
 router.get('/featured', PackageController.getFeatured)
 
-export default router
+module.exports = router;

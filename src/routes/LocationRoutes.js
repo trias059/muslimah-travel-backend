@@ -1,8 +1,8 @@
-import express from 'express'
-import LocationController from '../controllers/LocationController.js'
+const express = require('express');
+const LocationController = require('../controllers/LocationController');
 
 const router = express.Router()
 
 router.get('/', LocationController.getAll)
 
-export default router
+module.exports = router;

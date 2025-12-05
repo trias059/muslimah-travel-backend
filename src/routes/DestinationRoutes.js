@@ -1,8 +1,8 @@
-import express from 'express'
-import DestinationController from '../controllers/DestinastionController.js'
+const express = require('express');
+const DestinationController = require('../controllers/DestinationController');
 
 const router = express.Router()
 
 router.get('/search', DestinationController.search)
 
-export default router
+module.exports = router;

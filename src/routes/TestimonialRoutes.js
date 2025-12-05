@@ -1,8 +1,8 @@
-import express from 'express'
-import TestimonialController from '../controllers/TestimonialController.js'
+const express = require('express');
+const TestimonialController = require('../controllers/TestimonialController');
 
 const router = express.Router()
 
 router.get('/', TestimonialController.getFeatured)
 
-export default router
+module.exports = router;
