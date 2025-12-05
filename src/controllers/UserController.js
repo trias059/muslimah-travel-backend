@@ -14,7 +14,7 @@ const commonHelper = require('../helper/common')
 const authHelper = require('../helper/auth.js')
 const pool = require('../config/db.js')
 
-const AuthController = {
+const UserController = {
     register: async (req, res, next) => {
         try {
             const { email, password, fullname, phone_number } = req.body
