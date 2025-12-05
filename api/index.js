@@ -33,8 +33,8 @@ app.use('/locations', locationRoutes);
 app.use('/testimonials', testimonialRoutes);
 app.use('/wishlists', wishlistRoutes);
 
-app.all('*', (req, res, next) => {
-    next(new createError.NotFound());
+app.use((req, res, next) => {
+  next(createError.NotFound());
 });
 
 app.use((err, req, res, next) => {
