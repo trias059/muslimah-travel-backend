@@ -27,4 +27,4 @@ const WishlistController = {
     }
 }
 
-export default WishlistController
+module.exports = WishlistController;
