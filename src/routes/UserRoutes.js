@@ -1,19 +1,19 @@
 const express = require('express');
-const AuthController = require('../controllers/AuthController');
+const UserController = require('../controllers/UserController');
 const { protect, isAdmin } = require('../middleware/auth');
 
 const router = express.Router()
 
-router.get('/profile', protect, AuthController.getProfile)
-router.get('/users', protect, isAdmin, AuthController.getAllUsers)
+router.get('/profile', protect, UserController.getProfile)
+router.get('/users', protect, isAdmin, UserController.getAllUsers)
 
-router.post('/register', AuthController.register)
-router.post('/login', AuthController.login)
-router.post('/forgot-password', AuthController.forgotPassword)
-router.post('/reset-password', AuthController.resetPassword)
+router.post('/register', UserController.register)
+router.post('/login', UserController.login)
+router.post('/forgot-password', UserController.forgotPassword)
+router.post('/reset-password', UserController.resetPassword)
 
-router.put('/users/:id', protect, isAdmin, AuthController.updateUser)
+router.put('/users/:id', protect, isAdmin, UserController.updateUser)
 
-router.delete('/users/:id', protect, isAdmin, AuthController.deleteUser)
+router.delete('/users/:id', protect, isAdmin, UserController.deleteUser)
 
 module.exports = router;
