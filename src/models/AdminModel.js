@@ -289,6 +289,31 @@ const AdminModel = {
         );
     },
 
+    countAllOrders: ({ status, search }) => {
+        let query = `
+            SELECT COUNT(*) 
+            FROM bookings b
+            JOIN users u ON b.user_id = u.id
+            WHERE 1=1
+        `;
+        const params = [];
+        let paramIndex = 1;
+
+        if (status) {
+            query += ` AND b.status = $${paramIndex}`;
+            params.push(status);
+            paramIndex++;
+        }
+
+        if (search) {
+            query += ` AND (u.full_name ILIKE $${paramIndex} OR b.booking_code ILIKE $${paramIndex})`;
+            params.push(`%${search}%`);
+            paramIndex++;
+        }
+
+        return pool.query(query, params);
+    },
+
     updatePaymentStatus: (bookingId, paymentStatus) => {
         return pool.query(
             `UPDATE bookings 
@@ -327,6 +352,28 @@ const AdminModel = {
         return pool.query(
             'DELETE FROM community_posts WHERE id = $1 RETURNING id',
             [id]
+        );
+    },
+
+    countAllCommunityPosts: (month) => {
+    let query = 'SELECT COUNT(*) FROM community_posts WHERE 1=1';
+    const params = [];
+
+    if (month) {
+        query += ` AND TO_CHAR(created_at, 'Month') ILIKE $1`;
+        params.push(`%${month}%`);
+    }
+
+        return pool.query(query, params);
+    },
+
+    moderateCommunityPost: (id, status) => {
+        return pool.query(
+            `UPDATE community_posts 
+            SET status = $1, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $2 
+            RETURNING *`,
+            [status, id]
         );
     }
 };
