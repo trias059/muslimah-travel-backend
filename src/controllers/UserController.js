@@ -7,9 +7,12 @@ const {
     updateResetToken,
     findByResetToken,
     updatePassword,
-    updateUser,
-    deleteUser
-} = require('../models/users.js')
+    findById,
+    updateProfile,
+    updateAvatar,
+    deleteAvatar,
+    updatePasswordById
+} = require('../models/UserModel.js')
 const commonHelper = require('../helper/common')
 const authHelper = require('../helper/auth.js')
 const pool = require('../config/db.js')
@@ -180,7 +183,79 @@ const UserController = {
             console.log(error)
             next(createError(500, "Server error"))
         }
-    }
+    },
+
+    uploadAvatar: async (req, res, next) => {
+        try {
+            const userId = req.user.id;
+
+            if (!req.file) {
+                return commonHelper.response(res, null, 400, 'No file uploaded');
+            }
+
+            const { rows: [oldUser] } = await findById(userId);
+
+            if (oldUser && oldUser.avatar_url) {
+                try {
+                    const urlParts = oldUser.avatar_url.split('/');
+                    const publicIdWithExt = urlParts[urlParts.length - 1];
+                    const publicId = `saleema-tour/avatars/${publicIdWithExt.split('.')[0]}`;
+                    
+                    await cloudinary.uploader.destroy(publicId);
+                } catch (error) {
+                    console.log('Error deleting old avatar:', error);
+                }
+            }
+
+            const avatarUrl = req.file.path; 
+
+            const { rows: [user] } = await updateAvatar(userId, avatarUrl);
+
+            if (!user) {
+                return commonHelper.response(res, null, 404, 'User not found');
+            }
+
+            commonHelper.response(res, { avatar_url: user.avatar_url }, 200, 'Avatar uploaded successfully');
+
+        } catch (error) {
+            console.log(error);
+            next(createError(500, "Server error"));
+        }
+    },
+
+    deleteAvatarUser: async (req, res, next) => {
+        try {
+            const userId = req.user.id;
+
+            const { rows: [oldUser] } = await findById(userId);
+
+            if (oldUser && oldUser.avatar_url) {
+                try {
+                    const urlParts = oldUser.avatar_url.split('/');
+                    const publicIdWithExt = urlParts[urlParts.length - 1];
+                    const publicId = `saleema-tour/avatars/${publicIdWithExt.split('.')[0]}`;
+                    
+                    await cloudinary.uploader.destroy(publicId);
+                } catch (error) {
+                    console.log('Error deleting avatar from Cloudinary:', error);
+                }
+            }
+
+            const { rows: [user] } = await deleteAvatar(userId);
+
+            if (!user) {
+                return commonHelper.response(res, null, 404, 'User not found');
+            }
+
+            commonHelper.response(res, { avatar_url: null }, 200, 'Avatar deleted successfully');
+
+        } catch (error) {
+            console.log(error);
+            next(createError(500, "Server error"));
+        }
+    },
+
+
 }
 
 module.exports = UserController;
