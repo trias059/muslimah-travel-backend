@@ -1,58 +1,49 @@
-require('dotenv').config();
-const express = require('express');
-const createError = require('http-errors');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const path = require('path');
-const app = express();
+const express = require('express')
+require('dotenv/config')
+const helmet = require('helmet')
+const morgan = require('morgan')
+const cors = require('cors')
+const userRoutes = require('./routes/UserRoutes')
+const adminRoutes = require('./routes/AdminRoutes')
+const packageRoutes = require('./routes/PackageRoutes')
+const articleRoutes = require('./routes/ArticleRoutes')
+const destinationRoutes = require('./routes/DestinationRoutes')
+const locationRoutes = require('./routes/LocationRoutes')
+const testimonialRoutes = require('./routes/TestimonialRoutes')
+const wishlistRoutes = require('./routes/WishlistRoutes')
 
-const userRoutes = require('../src/routes/UserRoutes');          
-const adminRoutes = require('../src/routes/AdminRoutes');        
-const packageRoutes = require('../src/routes/PackageRoutes');
-const articleRoutes = require('../src/routes/ArticleRoutes');
-const destinationRoutes = require('../src/routes/DestinationRoutes');
-const locationRoutes = require('../src/routes/LocationRoutes');
-const testimonialRoutes = require('../src/routes/TestimonialRoutes');
-const wishlistRoutes = require('../src/routes/WishlistRoutes');
-const bookingRoutes = require('../src/routes/BookingRoutes');
-const reviewRoutes = require('../src/routes/ReviewRoutes');
+const app = express()
+const port = process.env.PORT || 3000
 
-app.use(helmet());
-app.use(cors());
-app.use(express.json());
-app.use(morgan('dev'));
+app.use(helmet())
+app.use(cors())
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+app.use(morgan('dev'))
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/user', userRoutes)
+app.use('/admin', adminRoutes)
+app.use('/packages', packageRoutes)
+app.use('/articles', articleRoutes)
+app.use('/destinations', destinationRoutes)
+app.use('/locations', locationRoutes)
+app.use('/testimonials', testimonialRoutes)
+app.use('/wishlists', wishlistRoutes)
 
 app.get('/', (req, res) => {
     res.json({
-        message: 'Muslimah Travel API is running!',
-        documentation: '/api-docs'
-    });
-});
+        message: 'Welcome to Muslimah Travel API',
+        documentation: '/api-docs',
+        version: '1.0.0'
+    })
+})
 
-app.use('/user', userRoutes);         
-app.use('/admin', adminRoutes);        
-app.use('/packages', packageRoutes);
-app.use('/articles', articleRoutes);
-app.use('/destinations', destinationRoutes);
-app.use('/locations', locationRoutes);
-app.use('/testimonials', testimonialRoutes);
-app.use('/wishlists', wishlistRoutes);
-app.use('/bookings', bookingRoutes);
-app.use('/reviews', reviewRoutes);
+app.get('/user', (req, res) => {
+    res.json({ status: 'OK' })
+})
 
-app.use((req, res, next) => {
-  next(createError.NotFound());
-});
+app.listen(port, () => {
+    console.log(`Server running at: http://localhost:${port}`)
+})
 
-app.use((err, req, res, next) => {
-    const messageError = err.message || 'internal server error';
-    const statusCode = err.status || 500;
-    res.status(statusCode).json({
-        message: messageError
-    });
-});
-
-module.exports = app;
+module.exports = app
