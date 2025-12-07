@@ -6,12 +6,12 @@ const UserModel = {
     },
 
     create: (data) => {
-        const { id, email, passwordHash, fullname, phoneNumber, role } = data;
+        const { id, email, passwordHash, name, phoneNumber, role } = data;
         return pool.query(
-            `INSERT INTO users (id, email, password, full_name, phone_number, role) 
+            `INSERT INTO users (id, email, password, name, phone_number, role) 
              VALUES ($1, $2, $3, $4, $5, $6) 
-             RETURNING id, full_name, email, phone_number, role`,
-            [id, email, passwordHash, fullname, phoneNumber, role]
+             RETURNING id, name, email, phone_number, role, created_at`,
+            [id, email, passwordHash, name, phoneNumber, role]
         );
     },
 
@@ -42,20 +42,53 @@ const UserModel = {
 
     findById: (id) => {
         return pool.query(
-            'SELECT id, full_name, email, phone_number, avatar_url, role, created_at FROM users WHERE id = $1',
+            `SELECT 
+                id, 
+                name, 
+                email, 
+                phone_number, 
+                avatar_url, 
+                birth_date,
+                nationality,
+                role, 
+                created_at,
+                updated_at
+             FROM users 
+             WHERE id = $1`,
             [id]
         );
     },
 
     updateProfile: (id, data) => {
-        const { fullname, phoneNumber } = data;
-        return pool.query(
-            `UPDATE users 
-             SET full_name = $1, phone_number = $2, updated_at = CURRENT_TIMESTAMP 
-             WHERE id = $3 
-             RETURNING id, full_name, email, phone_number, avatar_url, role`,
-            [fullname, phoneNumber, id]
-        );
+        const { name, email, phoneNumber } = data;
+
+        let query = 'UPDATE users SET updated_at = CURRENT_TIMESTAMP';
+        const params = [];
+        let paramIndex = 1;
+
+        if (name) {
+            query += `, name = $${paramIndex}`;
+            params.push(name);
+            paramIndex++;
+        }
+
+        if (email) {
+            query += `, email = $${paramIndex}`;
+            params.push(email);
+            paramIndex++;
+        }
+
+        if (phoneNumber) {
+            query += `, phone_number = $${paramIndex}`;
+            params.push(phoneNumber);
+            paramIndex++;
+        }
+
+        query += ` WHERE id = $${paramIndex} 
+                   RETURNING id, name, email, phone_number, avatar_url, role, updated_at`;
+        params.push(id);
+
+        return pool.query(query, params);
     },
 
     updateAvatar: (id, avatarUrl) => {
@@ -63,7 +96,7 @@ const UserModel = {
             `UPDATE users 
              SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP 
              WHERE id = $2 
-             RETURNING avatar_url`,
+             RETURNING id, avatar_url, updated_at`,
             [avatarUrl, id]
         );
     },
@@ -73,17 +106,17 @@ const UserModel = {
             `UPDATE users 
              SET avatar_url = NULL, updated_at = CURRENT_TIMESTAMP 
              WHERE id = $1 
-             RETURNING avatar_url`,
+             RETURNING id, avatar_url, updated_at`,
             [id]
         );
     },
-    
+
     updatePasswordById: (id, passwordHash) => {
         return pool.query(
             `UPDATE users 
              SET password = $1, updated_at = CURRENT_TIMESTAMP 
              WHERE id = $2 
-             RETURNING id`,
+             RETURNING id, updated_at`,
             [passwordHash, id]
         );
     }
