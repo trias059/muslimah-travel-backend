@@ -16,6 +16,7 @@ const reviewRoutes = require('./routes/ReviewRoutes')
 const paymentRoutes = require('./routes/PaymentRoutes')
 const itineraryRoutes = require('./routes/ItineraryRoutes')
 const adminRoutes = require('./routes/AdminRoutes')
+const { handleMulterError } = require('./middlewares/upload') 
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -39,6 +40,8 @@ app.use('/reviews', reviewRoutes)
 app.use('/payments', paymentRoutes)
 app.use('/itineraries', itineraryRoutes)
 app.use('/admin', adminRoutes)
+
+app.use(handleMulterError)
 
 app.get('/', (req, res) => {
     res.json({

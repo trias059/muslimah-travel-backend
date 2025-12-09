@@ -36,10 +36,52 @@ const reviewImageStorage = new CloudinaryStorage({
 
 const uploadReviewMedia = multer({
   storage: reviewImageStorage,
+  limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: imageFilter
-}); 
+});
+
+const paymentProofStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/payment-proofs');
+  },
+  filename: function (req, file, cb) {
+    cb(null, `proof-${Date.now()}${path.extname(file.originalname)}`);
+  }
+});
+
+const uploadImage = multer({
+  storage: paymentProofStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: imageFilter
+});
+
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File too large. Maximum size is 5MB'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+  
+  if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Error uploading file'
+    });
+  }
+  
+  next();
+};
 
 module.exports = {
   uploadAvatar,
-  uploadReviewMedia
+  uploadReviewMedia,
+  uploadImage,
+  handleMulterError
 };

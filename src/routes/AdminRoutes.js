@@ -2,8 +2,16 @@ const express = require('express');
 const AdminController = require('../controllers/AdminController');
 const { protect, isAdmin } = require('../middlewares/auth');
 const uploadPackageImage = require('../middlewares/uploadadmin');
+const uploadUserAvatar = require('../middlewares/uploadAvatar');
+const { 
+    adminLimiter, 
+    uploadLimiter, 
+    searchLimiter 
+} = require('../middlewares/rateLimiter');
 
 const router = express.Router();
+
+router.use(adminLimiter);
 
 router.get('/dashboard/stats', protect, isAdmin, AdminController.getDashboardStats);
 router.get('/dashboard/top-packages', protect, isAdmin, AdminController.getTopPackages);
@@ -12,21 +20,38 @@ router.get('/dashboard/booking-status', protect, isAdmin, AdminController.getBoo
 router.get('/dashboard/recent-bookings', protect, isAdmin, AdminController.getRecentBookings);
 
 router.get('/users', protect, isAdmin, AdminController.getAllUsers);
-router.get('/users/search', protect, isAdmin, AdminController.searchUsers);
+router.get('/users/search', protect, isAdmin, searchLimiter, AdminController.searchUsers);
 router.get('/users/:id', protect, isAdmin, AdminController.getUserDetail);
 router.post('/users', protect, isAdmin, AdminController.createUser);
 router.put('/users/:id', protect, isAdmin, AdminController.updateUser);
 router.delete('/users/:id', protect, isAdmin, AdminController.deleteUser);
 
 router.get('/packages', protect, isAdmin, AdminController.getAllPackages);
-router.get('/packages/search', protect, isAdmin, AdminController.searchPackages);
+router.get('/packages/search', protect, isAdmin, searchLimiter, AdminController.searchPackages);
 router.get('/packages/:id', protect, isAdmin, AdminController.getPackageDetail);
-router.post('/packages', protect, isAdmin, AdminController.createPackage);
-router.put('/packages/:id', protect, isAdmin, AdminController.updatePackage);
+
+router.post(
+    '/packages',
+    protect,
+    isAdmin,
+    uploadLimiter,
+    uploadPackageImage,
+    AdminController.createPackage
+);
+
+router.put(
+    '/packages/:id',
+    protect,
+    isAdmin,
+    uploadLimiter,
+    uploadPackageImage,
+    AdminController.updatePackage
+);
+
 router.delete('/packages/:id', protect, isAdmin, AdminController.deletePackage);
 
 router.get('/articles', protect, isAdmin, AdminController.getAllArticles);
-router.get('/articles/search', protect, isAdmin, AdminController.searchArticles);
+router.get('/articles/search', protect, isAdmin, searchLimiter, AdminController.searchArticles);
 router.get('/articles/:id', protect, isAdmin, AdminController.getArticleDetail);
 router.post('/articles', protect, isAdmin, AdminController.createArticle);
 router.put('/articles/:id', protect, isAdmin, AdminController.updateArticle);
@@ -39,11 +64,14 @@ router.patch('/orders/:booking_id/payment', protect, isAdmin, AdminController.up
 
 router.get('/profile', protect, isAdmin, AdminController.getAdminProfile);
 router.put('/profile', protect, isAdmin, AdminController.updateAdminProfile);
-router.post('/packages',
-  protect,
-  isAdmin,
-  uploadPackageImage.single('image'),
-  AdminController.createPackage
+
+router.post(
+    '/profile/photo',
+    protect,
+    isAdmin,
+    uploadLimiter,
+    uploadUserAvatar,
+    AdminController.uploadAdminPhoto
 );
 
 router.delete('/profile/photo', protect, isAdmin, AdminController.deleteAdminPhoto);

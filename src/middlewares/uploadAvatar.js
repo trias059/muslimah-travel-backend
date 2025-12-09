@@ -3,22 +3,21 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
 const { FILE_LIMITS, CLOUDINARY_FOLDERS } = require('../config/constants');
 
-const packageImageStorage = new CloudinaryStorage({
+const avatarStorage = new CloudinaryStorage({
     cloudinary,
     params: {
-        folder: CLOUDINARY_FOLDERS.PACKAGE_IMAGES,
+        folder: CLOUDINARY_FOLDERS.USER_AVATARS,
         allowed_formats: FILE_LIMITS.ALLOWED_IMAGE_FORMATS,
-        public_id: () => `package-${Date.now()}`,
+        public_id: () => `avatar-${Date.now()}`,
         transformation: [
-            { width: 1200, height: 800, crop: 'fill' },
-            { quality: 'auto' },
-            { fetch_format: 'auto' }
+            { width: 500, height: 500, crop: 'fill', gravity: 'face' },
+            { quality: 'auto' }
         ]
     }
 });
 
-const uploadPackageImage = multer({
-    storage: packageImageStorage,
+const uploadUserAvatar = multer({
+    storage: avatarStorage,
     limits: { 
         fileSize: FILE_LIMITS.IMAGE_MAX_SIZE,
         files: 1
@@ -37,7 +36,7 @@ const uploadPackageImage = multer({
             cb(new Error('Format file tidak didukung. Gunakan JPG, PNG, atau WebP'), false);
         }
     }
-}).single('image');
+}).single('avatar');
 
 const handleMulterError = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
@@ -58,7 +57,7 @@ const handleMulterError = (err, req, res, next) => {
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
             return res.status(400).json({
                 success: false,
-                message: 'Field name tidak sesuai. Gunakan "image"',
+                message: 'Field name tidak sesuai. Gunakan "avatar"',
                 error: 'UNEXPECTED_FIELD'
             });
         }
@@ -82,5 +81,5 @@ const handleMulterError = (err, req, res, next) => {
     next();
 };
 
-module.exports = uploadPackageImage;
+module.exports = uploadUserAvatar;
 module.exports.handleMulterError = handleMulterError;

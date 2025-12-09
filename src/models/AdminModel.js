@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { v4: uuidv4 } = require('uuid');
 
 const AdminModel = {
     getDashboardStats: () => {
@@ -257,6 +258,33 @@ const AdminModel = {
         );
     },
 
+    findOrCreateDestination: async (location, imageUrl) => {
+        const existing = await pool.query(
+            'SELECT id FROM destinations WHERE location ILIKE $1 LIMIT 1',
+            [location]
+        );
+
+        if (existing.rows.length > 0) {
+            return existing;
+        }
+
+        return pool.query(
+            `INSERT INTO destinations (id, name, location, category, is_halal_friendly, image_url, rating, description)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             RETURNING id`,
+            [
+                uuidv4(),
+                location,
+                location,
+                'International',
+                true,
+                imageUrl,
+                4.5,
+                `Paket wisata halal ke ${location}`
+            ]
+        );
+    },
+
     createPackage: (packageData) => {
         const { id, name, destination_id, image_url, start_date, price, duration_days, itinerary, quota, airline, departure_airport } = packageData;
         return pool.query(
@@ -470,17 +498,6 @@ const AdminModel = {
              JOIN packages p ON b.package_id = p.id
              WHERE b.booking_code = $1`,
             [tourId]
-        );
-    },
-
-    getOrderById: (bookingId) => {
-        return pool.query(
-            `SELECT b.*, u.full_name as customer_name, u.email, u.phone_number, p.name as package_name 
-             FROM bookings b
-             JOIN users u ON b.user_id = u.id
-             JOIN packages p ON b.package_id = p.id
-             WHERE b.id = $1`,
-            [bookingId]
         );
     },
 

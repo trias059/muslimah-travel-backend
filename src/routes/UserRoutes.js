@@ -1,8 +1,7 @@
 const express = require('express');
 const UserController = require('../controllers/UserController');
 const { protect } = require('../middlewares/auth');
-const { uploadAvatar } = require('../middlewares/upload');
-
+const uploadUserAvatar = require('../middlewares/uploadAvatar');  
 
 const router = express.Router();
 
@@ -15,9 +14,9 @@ router.post('/reset-password', UserController.resetPassword);
 router.get('/profile', protect, UserController.getProfile);
 router.put('/profile', protect, UserController.updateProfile);
 router.post('/profile/avatar',
-  protect,
-  uploadAvatar.single('avatar'),
-  UserController.updateAvatar
+    protect,
+    uploadUserAvatar,  
+    UserController.uploadAvatar
 );
 
 router.delete('/profile/avatar', protect, UserController.deleteAvatar);
