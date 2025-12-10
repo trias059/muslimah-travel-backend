@@ -27,7 +27,31 @@ const ArticleController = {
                 category
             });
 
-            commonHelper.paginated(res, rows, {
+            // Format response sesuai spec
+            const articles = rows.map(article => {
+                const date = new Date(article.created_at);
+                const tanggal = date.toLocaleDateString('id-ID', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+
+                let preview = '';
+                if (article.content) {
+                    const strippedContent = article.content.replace(/<[^>]*>/g, '');
+                    preview = strippedContent.substring(0, 100) + '...';
+                }
+
+                return {
+                    id: article.id,
+                    judul: article.title,
+                    tanggal: tanggal,
+                    preview: preview,
+                    imageUrl: article.cover_image_url
+                };
+            });
+
+            commonHelper.paginated(res, articles, {
                 page: parseInt(page),
                 total_pages: Math.ceil(count / limit),
                 total_items: parseInt(count),
@@ -61,7 +85,49 @@ const ArticleController = {
                 return commonHelper.notFound(res, 'Article not found');
             }
 
-            commonHelper.success(res, rows[0], 'Get article successful');
+            const article = rows[0];
+
+            const date = new Date(article.created_at);
+            const tanggal = date.toLocaleDateString('id-ID', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+            });
+
+            // Parse sections from content (h2 tags)
+            const sections = [];
+            if (article.content) {
+                const h2Regex = /<h2[^>]*>(.*?)<\/h2>/gi;
+                let match;
+
+                while ((match = h2Regex.exec(article.content)) !== null) {
+                    const title = match[1].replace(/<[^>]*>/g, '');
+                    const startIndex = match.index;
+                    
+                    const nextMatch = h2Regex.exec(article.content);
+                    const endIndex = nextMatch ? nextMatch.index : article.content.length;
+                    h2Regex.lastIndex = startIndex + match[0].length;
+                    
+                    const sectionContent = article.content.substring(startIndex + match[0].length, endIndex);
+                    
+                    sections.push({
+                        title: title,
+                        content: sectionContent.trim(),
+                        imageUrl: article.cover_image_url
+                    });
+                }
+            }
+
+            // Response sesuai spec
+            const responseData = {
+                judul: article.title,
+                tanggal: tanggal,
+                content: article.content,
+                imageUrl: article.cover_image_url,
+                sections: sections
+            };
+
+            commonHelper.success(res, responseData, 'Get article successful');
 
         } catch (error) {
             console.log(error);

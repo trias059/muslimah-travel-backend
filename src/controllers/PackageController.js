@@ -51,19 +51,37 @@ const PackageController = {
             const pkg = result.rows[0];
             const durasi = `${pkg.duration} Hari ${pkg.duration - 1} Malam`;
 
+            let periode = 'Periode belum ditentukan';
+            if (pkg.periode) {
+                const date = new Date(pkg.periode);
+                periode = date.toLocaleDateString('id-ID', { 
+                    day: 'numeric', 
+                    month: 'long' 
+                });
+            }
+
+            let itineraryData = {
+                startDate: periode,
+                endDate: periode,
+                schedule: []
+            };
+
+            if (pkg.itinerary && typeof pkg.itinerary === 'object') {
+                itineraryData.schedule = pkg.itinerary.schedule || [];
+            }
+
             return commonHelper.success(res, {
                 name: pkg.name,
                 location: pkg.location,
-                durasi: durasi,
-                periodeKeberangkatan: pkg.periode ? new Date(pkg.periode).toLocaleDateString('id-ID', { 
-                    day: 'numeric', 
-                    month: 'long' 
-                }) : null,
+                duration: durasi,
+                periode: periode,
                 maskapai: pkg.maskapai,
                 bandara: pkg.bandara,
                 harga: parseFloat(pkg.harga),
-                image: pkg.image,
-                itinerary: pkg.itinerary || {}
+                imageUrl: pkg.image,
+                tabs: ["Itenary", "Booking", "Testimoni"],
+                itinerary: itineraryData,
+                testimonials: []
             }, 'Get package successful');
         } catch (error) {
             console.error('getPackageDetail error:', error);

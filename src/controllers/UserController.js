@@ -1,139 +1,107 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
-const { v4: uuidv4 } = require('uuid');
-const UserModel = require('../models/UserModel.js');
-const cloudinary = require('../config/cloudinary');
-const commonHelper = require('../helpers/common.js');
-const authHelper = require('../helpers/auth.js');
 const {
-    findEmail,
-    updateResetToken,
-    findByResetToken,
-    updatePassword,
-    findById,
-    updateProfile,
-    deleteAvatar,
-    updatePasswordById,
-    create
-} = UserModel;
+  findEmail,
+  create,
+  updateResetToken,
+  findByResetToken,
+  updatePassword,
+} = require("../models/UserModel");
+const commonHelper = require("../helpers/common");
+const authHelper = require("../helpers/auth.js");
+const pool = require("../config/db.js");
 
 const UserController = {
     register: async (req, res, next) => {
         try {
-            const { email, password, password_confirm, full_name, phone_number } = req.body;
+            const { nama, email, noTelepon, password, konfirmasiPassword, setujuKebijakan } = req.body;
 
-            if (!email || !password || !password_confirm || !full_name || !phone_number) {
-                return commonHelper.badRequest(res, 'Semua field harus diisi');
+            if (!setujuKebijakan) {
+                return commonHelper.error(res, "Anda harus menyetujui kebijakan privasi", 400);
             }
 
-            if (password !== password_confirm) {
-                return commonHelper.badRequest(res, 'Password dan konfirmasi password tidak cocok');
-            }
-
-            if (password.length < 8) {
-                return commonHelper.badRequest(res, 'Password harus terdiri dari minimal 8 karakter');
+            if (password !== konfirmasiPassword) {
+                return commonHelper.error(res, "Password dan konfirmasi password tidak cocok", 400);
             }
 
             const { rowCount } = await findEmail(email);
+
             if (rowCount) {
-                return commonHelper.badRequest(res, "Email sudah digunakan");
+                return commonHelper.error(res, "Email sudah terdaftar", 403);
             }
 
             const passwordHash = bcrypt.hashSync(password, 10);
+            const userId = crypto.randomUUID();
             
             const data = {
-                id: uuidv4(),
+                id: userId,
                 email,
                 password: passwordHash,
-                full_name: full_name,
-                phone_number: phone_number,
+                full_name: nama,
+                phone_number: noTelepon,
                 role: "user",
             };
 
-            const { rows: [user] } = await create(data);
+            await create(data);
 
             const payload = {
-                id: user.id,
-                email: user.email,
-                role: user.role
+                id: userId,
+                email,
+                role: "user",
             };
 
-            const responseData = {
-                id: user.id,
-                full_name: user.full_name,
-                email: user.email,
-                token: authHelper.generateToken(payload)
-            };
-
-            commonHelper.created(res, responseData, 'Registrasi berhasil');
-
+            return commonHelper.success(res, {
+                userId: userId,
+                token: authHelper.generateToken(payload),
+            }, "Register successful", 201);
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     },
 
     login: async (req, res, next) => {
         try {
             const { email, password } = req.body;
-
-            if (!email || !password) {
-                return commonHelper.badRequest(res, 'Email dan password harus diisi');
-            }
-
             const { rows: [user] } = await findEmail(email);
+
             if (!user) {
-                return commonHelper.notFound(res, 'Email tidak ditemukan');
+                return commonHelper.error(res, "Email tidak valid", 403);
             }
 
             const isValidPassword = bcrypt.compareSync(password, user.password);
+
             if (!isValidPassword) {
-                return commonHelper.unauthorized(res, 'Password tidak valid');
+                return commonHelper.error(res, "Password tidak valid", 403);
             }
 
             const payload = {
                 id: user.id,
                 email: user.email,
-                role: user.role
+                role: user.role,
             };
 
-            const responseData = {
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role
-                },
-                token: authHelper.generateToken(payload)
-            };
-
-            commonHelper.success(res, responseData, 'Login berhasil');
-
+            return commonHelper.success(res, {
+                userId: user.id,
+                nama: user.full_name,
+                email: user.email,
+                role: user.role,
+                token: authHelper.generateToken(payload),
+                profileImage: user.avatar_url
+            }, "Login successful");
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
-        }
-    },
-
-    logout: async (req, res, next) => {
-        try {
-            commonHelper.success(res, null, 'Logout berhasil');
-        } catch (error) {
-            console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     },
 
     forgotPassword: async (req, res, next) => {
         try {
             const { email } = req.body;
-
-            if (!email) {
-                return commonHelper.badRequest(res, 'Email harus diisi');
-            }
-
             const { rows: [user] } = await findEmail(email);
+
             if (!user) {
-                return commonHelper.notFound(res, 'Email tidak ditemukan');
+                return commonHelper.error(res, "Email tidak ditemukan", 404);
             }
 
             const resetToken = crypto.randomUUID();
@@ -143,200 +111,100 @@ const UserController = {
 
             await updateResetToken(email, resetToken, resetExpires);
 
-            commonHelper.success(res, { resetToken }, 'Link reset password telah dikirim ke email Anda');
-
+            return commonHelper.success(res, { resetToken }, "Reset token generated");
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     },
 
     resetPassword: async (req, res, next) => {
         try {
-            const { token, password } = req.body;
-
-            if (!token || !password ) {
-                return commonHelper.badRequest(res, 'Semua field harus diisi');
-            }
-
+            const { token, newPassword } = req.body;
             const { rows: [user] } = await findByResetToken(token);
+
             if (!user) {
-                return commonHelper.badRequest(res, 'Token tidak valid atau sudah kedaluwarsa');
+                return commonHelper.error(res, "Token tidak valid atau sudah kadaluarsa", 400);
             }
 
-            const expiresFixed = new Date(new Date(user.reset_password_expires).getTime() + 7 * 60 * 60 * 1000);
+            const expiresFixed = new Date(
+                new Date(user.reset_password_expires).getTime() + 7 * 60 * 60 * 1000
+            );
+
             if (new Date() > expiresFixed) {
-                return commonHelper.badRequest(res, 'Token sudah kedaluwarsa');
+                return commonHelper.error(res, "Token sudah kadaluarsa", 400);
             }
 
-            const passwordHash = bcrypt.hashSync(password, 10);
+            const passwordHash = bcrypt.hashSync(newPassword, 10);
             await updatePassword(user.email, passwordHash);
 
-            commonHelper.success(res, null, 'Reset password berhasil');
-
+            return commonHelper.success(res, null, "Password berhasil direset");
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     },
 
     getProfile: async (req, res, next) => {
         try {
-            const { rows: [user] } = await findById(req.user.id);
-            
-            if (!user) {
-                return commonHelper.notFound(res, 'User tidak ditemukan');
-            }
-            
-            commonHelper.success(res, user, 'Get profile berhasil');
+            const { rows: [user] } = await findEmail(req.user.email);
 
+            return commonHelper.success(res, {
+                nama: user.full_name,
+                email: user.email,
+                noTelepon: user.phone_number,
+                profileImage: user.avatar_url
+            }, "Get profile successful");
         } catch (error) {
             console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     },
 
     updateProfile: async (req, res, next) => {
         try {
-            const userId = req.user.id;
-            const { full_name, email, phone_number } = req.body;
-
-            if (!full_name && !email && !phone_number) {
-                return commonHelper.badRequest(res, 'Setidaknya satu field harus diisi untuk diperbarui');
-            }
-
-            if (email) {
-                const { rows: [existingUser] } = await findEmail(email);
-                if (existingUser && existingUser.id !== userId) {
-                    return commonHelper.badRequest(res, 'Email sudah digunakan oleh pengguna lain');
-                }
-            }
-
-            const data = {
-                full_name,
-                email,
-                phoneNumber: phone_number
-            };
-
-            const { rows: [user] } = await updateProfile(userId, data);
-
-            if (!user) {
-                return commonHelper.notFound(res, 'User tidak ditemukan');
-            }
-
-            commonHelper.success(res, user, 'Profile berhasil diperbarui');
-
-        } catch (error) {
-            console.log(error);
-            commonHelper.error(res, 'Server error', 500);
-        }
-    },
-
-   uploadAvatar: async (req, res) => {
-        try {
+            const { nama, email, noTelepon, password } = req.body;
             const userId = req.user.id;
 
-            if (!req.file) {
-            return commonHelper.badRequest(res, 'File avatar diperlukan');
+            const updateData = {};
+            if (nama) updateData.full_name = nama;
+            if (email) updateData.email = email;
+            if (noTelepon) updateData.phone_number = noTelepon;
+            if (password) {
+                updateData.password = bcrypt.hashSync(password, 10);
             }
 
-            const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: 'muslimah-travel/avatars',
-            transformation: [
-                { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-                { quality: 'auto', fetch_format: 'auto' }
-            ],
-            public_id: `avatar_${userId}_${Date.now()}`
+            if (req.file) {
+                updateData.avatar_url = req.file.path;
+            }
+
+            const fields = [];
+            const values = [];
+            let paramIndex = 1;
+
+            Object.keys(updateData).forEach(key => {
+                fields.push(`${key} = $${paramIndex}`);
+                values.push(updateData[key]);
+                paramIndex++;
             });
 
-            const { rows: [user] } = await UserModel.uploadAvatar(userId, result.secure_url);
+            fields.push('updated_at = CURRENT_TIMESTAMP');
+            values.push(userId);
 
-            if (!user) {
-            return commonHelper.notFound(res, 'User tidak ditemukan');
-            }
+            const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING *`;
+            const result = await pool.query(query, values);
 
-            try { 
-            fs.unlinkSync(req.file.path); 
-            } catch (err) {}
+            const updatedUser = result.rows[0];
 
             return commonHelper.success(res, {
-            avatar_url: user.avatar_url
-            }, 'Avatar berhasil diunggah');
-
+                nama: updatedUser.full_name,
+                email: updatedUser.email,
+                noTelepon: updatedUser.phone_number,
+                profileImage: updatedUser.avatar_url
+            }, "Profile updated successfully");
         } catch (error) {
             console.log(error);
-            return commonHelper.error(res, 'Server error', 500);
-        }
-    },
-
-
-    deleteAvatar: async (req, res, next) => {
-        try {
-            const userId = req.user.id;
-
-            const { rows: [currentUser] } = await findById(userId);
-            
-            if (!currentUser) {
-                return commonHelper.notFound(res, 'User tidak ditemukan');
-            }
-
-            if (currentUser.avatar_url) {
-                try {
-                    const urlParts = currentUser.avatar_url.split('/');
-                    const filename = urlParts[urlParts.length - 1];
-                    const publicId = `muslimah-travel/avatars/${filename.split('.')[0]}`;
-                    
-                    await cloudinary.uploader.destroy(publicId);
-                } catch (cloudinaryError) {
-                    console.log('Cloudinary hapus error:', cloudinaryError);
-                }
-            }
-
-            await deleteAvatar(userId);
-
-            commonHelper.success(res, null, 'Avatar berhasil dihapus');
-
-        } catch (error) {
-            console.log(error);
-            commonHelper.error(res, 'Server error', 500);
-        }
-    },
-
-    changePassword: async (req, res, next) => {
-        try {
-            const userId = req.user.id;
-            const { current_password, new_password } = req.body;
-
-            if (!current_password || !new_password ) {
-                return commonHelper.badRequest(res, 'Semua field harus diisi');
-            }
-
-            if (new_password.length < 8) {
-                return commonHelper.badRequest(res, 'Password baru harus terdiri dari minimal 8 karakter');
-            }
-
-            const { rows: [user] } = await findById(userId);
-
-            if (!user) {
-                return commonHelper.notFound(res, 'User not found');
-            }
-
-            const { rows: [userWithPassword] } = await findEmail(user.email);
-
-            const isValidPassword = bcrypt.compareSync(current_password, userWithPassword.password);
-            if (!isValidPassword) {
-                return commonHelper.unauthorized(res, 'Password saat ini salah');
-            }
-
-            const passwordHash = bcrypt.hashSync(new_password, 10);
-
-            await updatePasswordById(userId, passwordHash);
-
-            commonHelper.success(res, null, 'Password berhasil diubah');
-
-        } catch (error) {
-            console.log(error);
-            commonHelper.error(res, 'Server error', 500);
+            return commonHelper.error(res, "Server error", 500);
         }
     }
 };
